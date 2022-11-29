@@ -39,15 +39,15 @@ int verbose;
 // gshare
 uint32_t ghistoryMask;
 uint32_t pcMask;
-uint32_t *gshareTable;
+uint8_t *gshareTable;
 uint32_t globalHistory;
 // tournament
-uint32_t *globalHistoryTable;
+uint8_t *globalHistoryTable;
 // indexed by global history bits and records the common case of global branches
-uint32_t *localHistoryTable;
+uint8_t *localHistoryTable;
 // indexed by local history bits which are calculated using pc and local branch table. Records
 // common case of the branch under consideration
-uint32_t *choiceTable;
+uint8_t *choiceTable;
 // used to choose if the global prediction is correct or local. If upon indexing with global history
 // bits, the prediction is taken (strong or weak), use the pred from the global table, else from local
 uint32_t *localBranchTable;
@@ -82,7 +82,7 @@ init_predictor()
       // As such to index this table, we need to ensure that the index lies in the same range. This
       // can achieved by &ing the result with ghistoryMask.
       int numEntries = 1 << ghistoryBits;
-      gshareTable = (uint32_t*)malloc(sizeof(uint32_t) * numEntries);
+      gshareTable = (uint8_t*)malloc(sizeof(uint8_t) * numEntries);
       // BHT of size 4 bytes * number of entries.
       // This table records the 2-bit saturating counters of various branches.
       for(int i=0;i<numEntries;i++) {
@@ -96,7 +96,7 @@ init_predictor()
         int globalTableSize;
         ghistoryMask = (1 << ghistoryBits) - 1;
         globalTableSize = 1 << ghistoryBits;
-        globalHistoryTable = (int*) malloc(sizeof(int) * globalTableSize);
+        globalHistoryTable = (uint8_t*) malloc(sizeof(uint8_t) * globalTableSize);
         for(int i=0;i<globalTableSize;i++){
           globalHistoryTable[i] = 1;
         }
@@ -104,7 +104,7 @@ init_predictor()
         int localTableSize;
         lhistoryMask = (1 << lhistoryBits) - 1;
         localTableSize = 1 << lhistoryBits;
-        localHistoryTable = (int*)malloc(sizeof(int) * localTableSize);
+        localHistoryTable = (uint8_t*)malloc(sizeof(uint8_t) * localTableSize);
         for(int i=0;i<localTableSize;i++){
           localHistoryTable[i] = 1;
         }
@@ -112,14 +112,14 @@ init_predictor()
         int localBranchTableSize;
         pcMask = (1 << pcIndexBits) - 1;
         localBranchTableSize = 1 << pcIndexBits;
-        localBranchTable = (int*)malloc(sizeof(int) * localBranchTableSize);
+        localBranchTable = (uint32_t*)malloc(sizeof(uint32_t) * localBranchTableSize);
         for(int i=0;i<localBranchTableSize;i++){
           localBranchTable[i] = 0;
         }
 
         int choiceTableSize;
         choiceTableSize = 1 << ghistoryBits;
-        choiceTable = (int*)malloc(sizeof(int) * choiceTableSize);
+        choiceTable = (uint8_t*)malloc(sizeof(uint8_t) * choiceTableSize);
         for(int i=0;i<choiceTableSize;i++){
           choiceTable[i] = 2;
           // weakly taken for global pred
@@ -152,7 +152,7 @@ make_prediction(uint32_t pc)
       return TAKEN;
     case GSHARE:
       {
-        uint32_t pred;
+        uint8_t pred;
         uint32_t ghistBits;
         uint32_t pcBits;
         uint32_t index;
@@ -171,7 +171,7 @@ make_prediction(uint32_t pc)
     case TOURNAMENT:
       
       {
-        uint32_t pred;
+        uint8_t pred;
         uint32_t ghistBits;
         uint32_t pcBits;
         uint32_t lhistBits;
@@ -245,9 +245,9 @@ train_predictor(uint32_t pc, uint8_t outcome)
         uint32_t ghistBits;
         uint32_t pcBits;
         uint32_t lhistBits;
-        uint32_t globalTablePred;
-        uint32_t localTablePred;
-        uint32_t choiceTablePred;
+        uint8_t globalTablePred;
+        uint8_t localTablePred;
+        uint8_t choiceTablePred;
         ghistBits = globalHistory & ghistoryMask;
         choiceTablePred = choiceTable[ghistBits];
         globalTablePred = globalHistoryTable[ghistBits];

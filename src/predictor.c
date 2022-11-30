@@ -53,6 +53,14 @@ uint8_t *choiceTable;
 uint32_t *localBranchTable;
 // records the local history of branches, indexed by pc bits
 uint32_t lhistoryMask;
+// custom
+int theta;
+int tablePerceptron;
+int nWeights;
+int upperLimit=127;
+int lowerLimit=-128;
+int **weightTable;
+int *biasTable;
 //------------------------------------//
 //        Predictor Functions         //
 //------------------------------------//
@@ -126,12 +134,28 @@ init_predictor()
         }
 
       }
-
+      case CUSTOM:
+      {
+			weightTable = (int**) malloc(sizeof(int*) * tablePerceptron);
+			for(int i=0; i<tablePerceptron; i++)
+				weightTable[i] = (int*) calloc(nWeights, sizeof(int));
+			biasTable = (int*) calloc(tablePerceptron, sizeof(int));
+			break;
+      }
     default:
       break;
   }
   
 
+}
+
+int perceptron_sum(uint32_t pc)
+{
+	int wIndex = pc & (tablePerceptron - 1);
+	int sum = biasTable[wIndex];
+	for(int i=0; i<nWeights; i++)
+		sum = ((globalHistory>>i)&1) ? sum + weightTable[wIndex][i] : sum - weightTable[wIndex][i];
+	return sum;
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
@@ -195,6 +219,13 @@ make_prediction(uint32_t pc)
         }
       }
     case CUSTOM:
+      {
+        int sum = perceptron_sum(pc);
+        if(sum > 0)
+          return TAKEN;
+        else
+          return NOTTAKEN;
+      }    
     default:
       break;
     
@@ -298,7 +329,36 @@ train_predictor(uint32_t pc, uint8_t outcome)
         localBranchTable[pcBits] = localBranchTable[pcBits] << 1 | outcome & lhistoryMask;
         return;
       }
+    case CUSTOM:
+      {
+        int sum = perceptron_sum(pc);
+        int wIndex = pc & (tablePerceptron - 1);
+        int perceptronOutcome = sum>=0;
+        //Train predictor only if prediction != outcome or perceptron sum is less than threshold 
+        if (abs(sum) <= theta || perceptronOutcome != outcome) 
+        {
+          //Update bias table entries
+          biasTable[wIndex] += (outcome==TAKEN) ? 1 : -1; 
 
+          if(biasTable[wIndex] > upperLimit){
+            biasTable[wIndex]--;
+          }
+          else if(biasTable[wIndex] < lowerLimit) {
+            biasTable[wIndex]++;}
+            
+            //Update perceptron table entries 
+            for (int i=0; i<nWeights; i++) 
+            {
+              weightTable[wIndex][i] += (((globalHistory>>i) & 1)==outcome) ? 1 : -1;
+              if(weightTable[wIndex][i] > upperLimit){
+                weightTable[wIndex][i]--;
+              }
+              else if(weightTable[wIndex][i] < lowerLimit) {
+                weightTable[wIndex][i]++;
+                }
+          }}
+          globalHistory = (globalHistory<<1 | outcome) & ((1<<nWeights) - 1);
+      }
     default:
       break;
 

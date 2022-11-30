@@ -46,6 +46,9 @@ extern int lhistoryBits; // Number of bits used for Local History
 extern int pcIndexBits;  // Number of bits used for PC index
 extern int bpType;       // Branch Prediction Type
 extern int verbose;
+extern int theta; 
+extern int tablePerceptron; 
+extern int nWeights;
 
 //------------------------------------//
 //    Predictor Function Prototypes   //
